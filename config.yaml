@@ -1,0 +1,21 @@
+salida:
+  directorio_videos: videos_salida
+  directorio_resultados: resultados
+
+deteccion:
+  metodo: yolo
+  modelo: yolov8n.pt
+  confianza: 0.25
+  iou: 0.45
+  # COCO: person=0, bicycle=1, car=2, sports ball=32.
+  clases: [0, 1, 2, 3, 5, 7, 32]
+  dispositivo: auto
+  tracker: bytetrack.yaml
+  movimiento:
+    ventana_frames: 6
+    minimo_frames: 3
+    desplazamiento_minimo_px: 12
+
+visualizacion:
+  mostrar: true
+  guardar_video: true

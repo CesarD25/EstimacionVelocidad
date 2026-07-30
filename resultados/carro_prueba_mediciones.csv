@@ -1,0 +1,2 @@
+track_id,clase,direccion,frame_a,frame_b,distancia_m,tiempo_s,velocidad_m_s,velocidad_km_h
+1,car,A->B,6,20,9.954613052532702,0.4666666666666667,21.331313683998648,76.79272926239513

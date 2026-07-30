@@ -1,0 +1,7 @@
+opencv-python
+numpy
+pyyaml
+pandas
+ultralytics>=8.3
+openpyxl
+lap>=0.5.12
