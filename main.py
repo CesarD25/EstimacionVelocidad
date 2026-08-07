@@ -1,8 +1,10 @@
-"""Estimación de velocidad con YOLO preentrenado y ByteTrack."""
+"""Estimación de velocidad con YOLO preentrenado y ByteTrack (con Interfaz Gráfica)."""
 
 import json
 from collections import deque
 from pathlib import Path
+import tkinter as tk
+from tkinter import filedialog, messagebox
 
 import cv2
 import numpy as np
@@ -38,8 +40,7 @@ def _ruta_calibracion(video):
 def _cargar_calibracion(ruta):
     if not ruta:
         raise FileNotFoundError(
-            "No hay calibración para este video. Ejecute primero: "
-            "python main.py y seleccione la opción de calibración."
+            "No hay calibración para este video. Ejecute primero la opción de calibración."
         )
     with open(ruta, encoding="utf-8") as archivo:
         datos = json.load(archivo)
@@ -256,7 +257,8 @@ def procesar(config, video=None, mostrar=None):
                             (x + 8, y), cv2.FONT_HERSHEY_SIMPLEX, 0.65,
                             (0, 255, 255), 2)
         if writer:
-            writer.write(frame)
+            for _ in range(4):
+                writer.write(frame)
         if mostrar:
             cv2.imshow("YOLO + ByteTrack - Estimacion de velocidad", frame)
             if cv2.waitKey(1) & 0xFF == ord("q"):
@@ -273,53 +275,82 @@ def procesar(config, video=None, mostrar=None):
     return mediciones
 
 
-def _listar_videos():
-    extensiones = {".mp4", ".avi", ".mov", ".mkv"}
-    carpeta = Path("videos_entrada")
-    return sorted(
-        ruta for ruta in carpeta.iterdir()
-        if ruta.is_file() and ruta.suffix.lower() in extensiones
-    ) if carpeta.exists() else []
+class AppVelocidad:
+    def __init__(self, root, config):
+        self.root = root
+        self.config = config
+        self.root.title("Estimación de Velocidad")
+        self.root.geometry("400x250")
+        self.root.resizable(False, False)
+        
+        # Centrar ventana
+        self.root.eval('tk::PlaceWindow . center')
 
+        tk.Label(
+            root, 
+            text="Sistema de Medición de Velocidad", 
+            font=("Arial", 14, "bold")
+        ).pack(pady=20)
 
-def _elegir_video():
-    videos = _listar_videos()
-    print("\nVideos disponibles:")
-    for indice, video in enumerate(videos, 1):
-        print(f"  {indice}) {video.name}")
-    print("  0) Escribir otra ruta")
-    while True:
-        opcion = input("Seleccione el video: ").strip()
-        if opcion == "0":
-            ruta = Path(input("Ruta del video: ").strip().strip('"'))
-            if ruta.is_file():
-                return str(ruta)
-            print("El archivo no existe.")
-        elif opcion.isdigit() and 1 <= int(opcion) <= len(videos):
-            return str(videos[int(opcion) - 1])
-        else:
-            print("Opción inválida.")
+        tk.Button(
+            root, 
+            text="1) Calibrar un video", 
+            command=self.calibrar_video, 
+            width=25, 
+            height=2,
+            font=("Arial", 10)
+        ).pack(pady=10)
+        
+        tk.Button(
+            root, 
+            text="2) Ejecutar un video", 
+            command=self.ejecutar_video, 
+            width=25, 
+            height=2,
+            font=("Arial", 10)
+        ).pack(pady=10)
 
+    def seleccionar_video(self):
+        ruta = filedialog.askopenfilename(
+            title="Seleccione el video",
+            initialdir="videos_entrada",
+            filetypes=[
+                ("Archivos de video", "*.mp4 *.avi *.mov *.mkv"), 
+                ("Todos los archivos", "*.*")
+            ]
+        )
+        return str(Path(ruta)) if ruta else None
 
-def _elegir_modo():
-    print("Sistema de estimación de velocidad")
-    print("  1) Calibrar un video")
-    print("  2) Ejecutar un video")
-    while True:
-        opcion = input("Seleccione una opción [1/2]: ").strip()
-        if opcion in {"1", "2"}:
-            return opcion
-        print("Opción inválida.")
+    def calibrar_video(self):
+        video = self.seleccionar_video()
+        if video:
+            self.root.withdraw()  # Oculta la GUI mientras OpenCV trabaja
+            try:
+                run_interactive_calibration(video)
+                messagebox.showinfo("Éxito", "Calibración guardada exitosamente.")
+            except Exception as e:
+                messagebox.showerror("Error", f"No se pudo calibrar:\n{e}")
+            finally:
+                self.root.deiconify()  # Muestra la GUI nuevamente
+
+    def ejecutar_video(self):
+        video = self.seleccionar_video()
+        if video:
+            self.root.withdraw()
+            try:
+                procesar(self.config, video)
+                messagebox.showinfo("Éxito", "Procesamiento finalizado. Resultados guardados en 'resultados/'.")
+            except Exception as e:
+                messagebox.showerror("Error", f"Ocurrió un error al procesar:\n{e}")
+            finally:
+                self.root.deiconify()
 
 
 def main():
     config = cargar_configuracion()
-    modo = _elegir_modo()
-    video = _elegir_video()
-    if modo == "1":
-        run_interactive_calibration(video)
-    else:
-        procesar(config, video)
+    root = tk.Tk()
+    app = AppVelocidad(root, config)
+    root.mainloop()
 
 
 if __name__ == "__main__":
